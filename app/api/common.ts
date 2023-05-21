@@ -31,35 +31,41 @@ export async function requestOpenai(req: NextRequest) {
   }, 10 * 60 * 1000);
 
   const fetchUrl = `${baseUrl}/${openaiPath}`;
-  const fetchOptions: RequestInit = {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: authValue,
-      ...(process.env.OPENAI_ORG_ID && {
-        "OpenAI-Organization": process.env.OPENAI_ORG_ID,
-      }),
-    },
-    cache: "no-store",
-    method: req.method,
-    body: req.body,
-    signal: controller.signal,
-  };
+const fetchOptions: RequestInit = {
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: authValue,
+    ...(process.env.OPENAI_ORG_ID && {
+      "OpenAI-Organization": process.env.OPENAI_ORG_ID,
+    }),
+  },
+  cache: "no-store",
+  method: req.method,
+  body: req.body,
+  signal: controller.signal,
+};
 
-  try {
-    const res = await fetch(fetchUrl, fetchOptions);
+try {
+  let res = await fetch(fetchUrl, fetchOptions);
 
-    if (res.status === 401) {
-      // to prevent browser prompt for credentials
-      //res.headers.delete("www-authenticate");
-      headers = {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer sk-I"
-      }
+  if (res.status === 401) {
+    // Create new fetchOptions with modified headers
+    const newFetchOptions: RequestInit = {
+      ...fetchOptions,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer sk-I",
+      },
+    };
 
-    }
-
-    return res;
-  } finally {
-    clearTimeout(timeoutId);
+    // Make the request again with the modified headers
+    res = await fetch(fetchUrl, newFetchOptions);
   }
+
+  return res;
+} finally {
+  clearTimeout(timeoutId);
+}
+
+
 }
